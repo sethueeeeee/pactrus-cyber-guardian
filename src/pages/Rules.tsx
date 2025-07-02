@@ -1,0 +1,307 @@
+
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  Shield, 
+  Search, 
+  Filter, 
+  Plus,
+  Edit,
+  Trash2,
+  Activity,
+  User
+} from "lucide-react";
+import RuleGenerator from "@/components/RuleGenerator";
+
+const Rules = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [isRuleGeneratorOpen, setIsRuleGeneratorOpen] = useState(false);
+  const [selectedRules, setSelectedRules] = useState<number[]>([]);
+
+  const rules = [
+    {
+      id: 1,
+      name: "SQL Injection Detection",
+      attackType: "SQL Injection",
+      status: "Active",
+      confidence: 95,
+      created: "2024-01-15",
+      priority: "Critical"
+    },
+    {
+      id: 2,
+      name: "SSH Brute Force Protection",
+      attackType: "Brute Force",
+      status: "Active",
+      confidence: 88,
+      created: "2024-01-14",
+      priority: "High"
+    },
+    {
+      id: 3,
+      name: "Port Scan Detection",
+      attackType: "Port Scan",
+      status: "Inactive",
+      confidence: 92,
+      created: "2024-01-13",
+      priority: "Medium"
+    },
+    {
+      id: 4,
+      name: "XSS Attack Prevention",
+      attackType: "XSS",
+      status: "Active",
+      confidence: 90,
+      created: "2024-01-12",
+      priority: "High"
+    },
+    {
+      id: 5,
+      name: "DDoS Traffic Filter",
+      attackType: "DDoS",
+      status: "Pending",
+      confidence: 85,
+      created: "2024-01-11",
+      priority: "Critical"
+    }
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Active": return "bg-green-500";
+      case "Inactive": return "bg-gray-500";
+      case "Pending": return "bg-yellow-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "Critical": return "bg-red-500";
+      case "High": return "bg-orange-500";
+      case "Medium": return "bg-yellow-500";
+      case "Low": return "bg-gray-500";
+      default: return "bg-gray-500";
+    }
+  };
+
+  const filteredRules = rules.filter(rule => {
+    const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         rule.attackType.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterType === "all" || rule.status.toLowerCase() === filterType;
+    return matchesSearch && matchesFilter;
+  });
+
+  const handleSelectRule = (ruleId: number) => {
+    setSelectedRules(prev => 
+      prev.includes(ruleId) 
+        ? prev.filter(id => id !== ruleId)
+        : [...prev, ruleId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setSelectedRules(
+      selectedRules.length === filteredRules.length 
+        ? [] 
+        : filteredRules.map(rule => rule.id)
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#1a1d29] text-white">
+      {/* Navigation Bar */}
+      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-8 w-8 text-purple-400" />
+              <span className="text-xl font-bold text-white">CyberGuard</span>
+            </div>
+            <div className="hidden md:flex space-x-6">
+              <Link to="/" className="text-gray-300 hover:text-white">Dashboard</Link>
+              <Link to="/rules" className="text-purple-400 hover:text-purple-300 font-medium">Security Rules</Link>
+              <Link to="/alerts" className="text-gray-300 hover:text-white">Alerts</Link>
+              <Link to="/monitoring" className="text-gray-300 hover:text-white">Monitoring</Link>
+              <Link to="/telegram" className="text-gray-300 hover:text-white">Telegram</Link>
+              <Link to="/settings" className="text-gray-300 hover:text-white">Settings</Link>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <User className="h-5 w-5 text-gray-300" />
+          </div>
+        </div>
+      </nav>
+
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Security Rules</h1>
+            <p className="text-gray-400">Manage your Suricata IDS/IPS rules</p>
+          </div>
+          <Button 
+            onClick={() => setIsRuleGeneratorOpen(true)}
+            className="bg-purple-500 hover:bg-purple-600 text-white"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Generate New Rule
+          </Button>
+        </div>
+
+        {/* Search and Filter Bar */}
+        <Card className="bg-[#2d3748] border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search rules by name or attack type..."
+                  className="pl-10 bg-[#1a1d29] border-gray-600 text-white"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <select 
+                  className="px-3 py-2 bg-[#1a1d29] border border-gray-600 rounded-md text-white"
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <Button variant="outline" className="border-gray-600 text-gray-300">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bulk Actions */}
+        {selectedRules.length > 0 && (
+          <Card className="bg-[#2d3748] border-gray-700">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-white">{selectedRules.length} rules selected</span>
+                <div className="flex gap-2">
+                  <Button size="sm" className="bg-green-500 hover:bg-green-600">
+                    <Activity className="mr-2 h-4 w-4" />
+                    Deploy Selected
+                  </Button>
+                  <Button size="sm" variant="outline" className="border-gray-600 text-gray-300">
+                    Deactivate Selected
+                  </Button>
+                  <Button size="sm" variant="outline" className="border-red-600 text-red-400">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Selected
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Rules Table */}
+        <Card className="bg-[#2d3748] border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-white">Rules ({filteredRules.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-gray-600">
+                    <TableHead className="text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={selectedRules.length === filteredRules.length && filteredRules.length > 0}
+                        onChange={handleSelectAll}
+                        className="mr-2"
+                      />
+                      Rule Name
+                    </TableHead>
+                    <TableHead className="text-gray-300">Attack Type</TableHead>
+                    <TableHead className="text-gray-300">Status</TableHead>
+                    <TableHead className="text-gray-300">Confidence</TableHead>
+                    <TableHead className="text-gray-300">Priority</TableHead>
+                    <TableHead className="text-gray-300">Created</TableHead>
+                    <TableHead className="text-gray-300">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRules.map((rule) => (
+                    <TableRow key={rule.id} className="border-gray-600">
+                      <TableCell className="text-white">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedRules.includes(rule.id)}
+                            onChange={() => handleSelectRule(rule.id)}
+                            className="mr-3"
+                          />
+                          {rule.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-blue-500 text-white">{rule.attackType}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusColor(rule.status)} text-white`}>
+                          {rule.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-white">{rule.confidence}%</TableCell>
+                      <TableCell>
+                        <Badge className={`${getPriorityColor(rule.priority)} text-white`}>
+                          {rule.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-gray-400">{rule.created}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button size="sm" variant="outline" className="border-gray-600 text-gray-300">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="border-red-600 text-red-400">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" className="bg-green-500 hover:bg-green-600">
+                            Deploy
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <RuleGenerator 
+        isOpen={isRuleGeneratorOpen}
+        onClose={() => setIsRuleGeneratorOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default Rules;
