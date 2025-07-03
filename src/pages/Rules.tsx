@@ -25,13 +25,32 @@ import {
 } from "lucide-react";
 import RuleGenerator from "@/components/RuleGenerator";
 
+interface Rule {
+  id: number;
+  name: string;
+  attackType: string;
+  status: string;
+  confidence: number;
+  created: string;
+  priority: string;
+  sourceIp?: string;
+  sourcePort?: string;
+  targetIp?: string;
+  targetPort?: string;
+  action?: string;
+  protocol?: string;
+  description?: string;
+  customOptions?: string;
+}
+
 const Rules = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
   const [isRuleGeneratorOpen, setIsRuleGeneratorOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [selectedRules, setSelectedRules] = useState<number[]>([]);
 
-  const rules = [
+  const [rules, setRules] = useState<Rule[]>([
     {
       id: 1,
       name: "SQL Injection Detection",
@@ -39,7 +58,15 @@ const Rules = () => {
       status: "Active",
       confidence: 95,
       created: "2024-01-15",
-      priority: "Critical"
+      priority: "Critical",
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "192.168.1.0/24",
+      targetPort: "80",
+      action: "alert",
+      protocol: "tcp",
+      description: "Detects SQL injection attempts",
+      customOptions: "content:\"union select\"; nocase;"
     },
     {
       id: 2,
@@ -48,7 +75,15 @@ const Rules = () => {
       status: "Active",
       confidence: 88,
       created: "2024-01-14",
-      priority: "High"
+      priority: "High",
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "22",
+      action: "drop",
+      protocol: "tcp",
+      description: "Blocks SSH brute force attacks",
+      customOptions: "detection_filter:track by_src, count 5, seconds 60;"
     },
     {
       id: 3,
@@ -57,7 +92,15 @@ const Rules = () => {
       status: "Inactive",
       confidence: 92,
       created: "2024-01-13",
-      priority: "Medium"
+      priority: "Medium",
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "any",
+      action: "alert",
+      protocol: "tcp",
+      description: "Detects port scanning activities",
+      customOptions: "threshold:type threshold, track by_src, count 10, seconds 60;"
     },
     {
       id: 4,
@@ -66,7 +109,15 @@ const Rules = () => {
       status: "Active",
       confidence: 90,
       created: "2024-01-12",
-      priority: "High"
+      priority: "High",
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "80",
+      action: "alert",
+      protocol: "http",
+      description: "Prevents XSS attacks",
+      customOptions: "content:\"<script\"; nocase;"
     },
     {
       id: 5,
@@ -75,9 +126,17 @@ const Rules = () => {
       status: "Pending",
       confidence: 85,
       created: "2024-01-11",
-      priority: "Critical"
+      priority: "Critical",
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "any",
+      action: "drop",
+      protocol: "tcp",
+      description: "Filters DDoS traffic patterns",
+      customOptions: "threshold:type both, track by_src, count 100, seconds 10;"
     }
-  ];
+  ]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -121,6 +180,53 @@ const Rules = () => {
     );
   };
 
+  const handleEditRule = (rule: Rule) => {
+    setEditingRule(rule);
+    setIsRuleGeneratorOpen(true);
+  };
+
+  const handleDeleteRule = (ruleId: number) => {
+    setRules(prev => prev.filter(rule => rule.id !== ruleId));
+  };
+
+  const handleSaveRule = (ruleData: any) => {
+    if (editingRule) {
+      // Update existing rule
+      setRules(prev => prev.map(rule => 
+        rule.id === editingRule.id 
+          ? { 
+              ...rule, 
+              ...ruleData,
+              id: rule.id // Keep the original ID
+            }
+          : rule
+      ));
+    } else {
+      // Add new rule
+      const newRule: Rule = {
+        id: Math.max(...rules.map(r => r.id)) + 1,
+        ...ruleData,
+        status: "Pending",
+        confidence: 95,
+        created: new Date().toISOString().split('T')[0]
+      };
+      setRules(prev => [...prev, newRule]);
+    }
+    
+    setEditingRule(null);
+    setIsRuleGeneratorOpen(false);
+  };
+
+  const handleCloseGenerator = () => {
+    setEditingRule(null);
+    setIsRuleGeneratorOpen(false);
+  };
+
+  const handleNewRule = () => {
+    setEditingRule(null);
+    setIsRuleGeneratorOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
       {/* Navigation Bar */}
@@ -154,7 +260,7 @@ const Rules = () => {
             <p className="text-gray-400">Manage your Suricata IDS/IPS rules</p>
           </div>
           <Button 
-            onClick={() => setIsRuleGeneratorOpen(true)}
+            onClick={handleNewRule}
             className="bg-purple-500 hover:bg-purple-600 text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -276,10 +382,20 @@ const Rules = () => {
                       <TableCell className="text-gray-400">{rule.created}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline" className="border-gray-600 text-gray-300">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                            onClick={() => handleEditRule(rule)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" className="border-red-600 text-red-400">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="border-red-600 text-red-400 hover:bg-red-900"
+                            onClick={() => handleDeleteRule(rule.id)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                           <Button size="sm" className="bg-green-500 hover:bg-green-600">
@@ -298,7 +414,9 @@ const Rules = () => {
 
       <RuleGenerator 
         isOpen={isRuleGeneratorOpen}
-        onClose={() => setIsRuleGeneratorOpen(false)}
+        onClose={handleCloseGenerator}
+        onSave={handleSaveRule}
+        editingRule={editingRule}
       />
     </div>
   );

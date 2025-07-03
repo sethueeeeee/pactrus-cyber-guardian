@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,11 @@ import {
 interface RuleGeneratorProps {
   isOpen: boolean;
   onClose: () => void;
+  onSave?: (ruleData: any) => void;
+  editingRule?: any;
 }
 
-const RuleGenerator = ({ isOpen, onClose }: RuleGeneratorProps) => {
+const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorProps) => {
   const [ruleConfig, setRuleConfig] = useState({
     attackType: "SQL Injection",
     ruleName: "",
@@ -35,6 +37,41 @@ const RuleGenerator = ({ isOpen, onClose }: RuleGeneratorProps) => {
   });
 
   const [generatedRule, setGeneratedRule] = useState("");
+
+  // Load editing rule data when component mounts or editingRule changes
+  useEffect(() => {
+    if (editingRule) {
+      setRuleConfig({
+        attackType: editingRule.attackType || "SQL Injection",
+        ruleName: editingRule.name || "",
+        sourceIp: editingRule.sourceIp || "any",
+        sourcePort: editingRule.sourcePort || "any",
+        targetIp: editingRule.targetIp || "any",
+        targetPort: editingRule.targetPort || "80",
+        action: editingRule.action || "alert",
+        protocol: editingRule.protocol || "tcp",
+        description: editingRule.description || "",
+        priority: editingRule.priority?.toLowerCase() || "medium",
+        customOptions: editingRule.customOptions || ""
+      });
+    } else {
+      // Reset form for new rule
+      setRuleConfig({
+        attackType: "SQL Injection",
+        ruleName: "",
+        sourceIp: "any",
+        sourcePort: "any",
+        targetIp: "any",
+        targetPort: "80",
+        action: "alert",
+        protocol: "tcp",
+        description: "",
+        priority: "medium",
+        customOptions: ""
+      });
+    }
+    setGeneratedRule("");
+  }, [editingRule, isOpen]);
 
   const attackTypes = [
     "SQL Injection", "XSS", "Port Scan", "Brute Force", "DDoS", 
@@ -60,11 +97,37 @@ const RuleGenerator = ({ isOpen, onClose }: RuleGeneratorProps) => {
     setRuleConfig(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSave = () => {
+    if (onSave) {
+      const ruleData = {
+        name: ruleConfig.ruleName || `${ruleConfig.attackType} Rule`,
+        attackType: ruleConfig.attackType,
+        sourceIp: ruleConfig.sourceIp,
+        sourcePort: ruleConfig.sourcePort,
+        targetIp: ruleConfig.targetIp,
+        targetPort: ruleConfig.targetPort,
+        action: ruleConfig.action,
+        protocol: ruleConfig.protocol,
+        description: ruleConfig.description,
+        priority: ruleConfig.priority.charAt(0).toUpperCase() + ruleConfig.priority.slice(1),
+        customOptions: ruleConfig.customOptions
+      };
+      onSave(ruleData);
+    }
+  };
+
+  const handleClose = () => {
+    setGeneratedRule("");
+    onClose();
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-[#2d3748] border-gray-700 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-white text-xl">Suricata Rule Generator</DialogTitle>
+          <DialogTitle className="text-white text-xl">
+            {editingRule ? "Edit Security Rule" : "Suricata Rule Generator"}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -220,9 +283,10 @@ const RuleGenerator = ({ isOpen, onClose }: RuleGeneratorProps) => {
               {generatedRule && (
                 <>
                   <Button 
+                    onClick={handleSave}
                     className="w-full bg-green-500 hover:bg-green-600 text-white"
                   >
-                    Deploy Rule
+                    {editingRule ? "Update Rule" : "Save Rule"}
                   </Button>
                   <Button 
                     variant="outline"
