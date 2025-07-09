@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Rules from "./pages/Rules";
 import Alerts from "./pages/Alerts";
+import MLRuleSuggestions from "./pages/MLRuleSuggestions";
+import AttackPatterns from "./pages/AttackPatterns";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +23,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/ml-suggestions" element={<MLRuleSuggestions />} />
+          <Route path="/attack-patterns" element={<AttackPatterns />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

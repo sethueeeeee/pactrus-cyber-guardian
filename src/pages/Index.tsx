@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,6 +104,14 @@ const Index = () => {
     }
   };
 
+  const handleMLSuggestionClick = () => {
+    navigate("/ml-suggestions");
+  };
+
+  const handleAttackPatternClick = () => {
+    navigate("/attack-patterns");
+  };
+
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
       {/* Navigation Bar */}
@@ -118,7 +125,9 @@ const Index = () => {
             <div className="hidden md:flex space-x-6">
               <Link to="/" className="text-purple-400 hover:text-purple-300 font-medium">Dashboard</Link>
               <Link to="/rules" className="text-gray-300 hover:text-white">Security Rules</Link>
+              <Link to="/ml-suggestions" className="text-gray-300 hover:text-white">ML Suggestions</Link>
               <Link to="/alerts" className="text-gray-300 hover:text-white">Alerts</Link>
+              <Link to="/attack-patterns" className="text-gray-300 hover:text-white">Attack Patterns</Link>
               <Link to="/monitoring" className="text-gray-300 hover:text-white">Monitoring</Link>
               <Link to="/telegram" className="text-gray-300 hover:text-white">Telegram</Link>
               <Link to="/settings" className="text-gray-300 hover:text-white">Settings</Link>
@@ -200,15 +209,24 @@ const Index = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Recent Attack Patterns</CardTitle>
-              <Button variant="outline" size="sm" className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white">
-                View in Kibana Dashboard
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
+                onClick={handleAttackPatternClick}
+              >
+                View Detailed Analysis
               </Button>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {recentAttacks.map((attack, index) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-[#1a1d29] rounded-lg border border-gray-600">
+                <div 
+                  key={index} 
+                  className="flex items-center justify-between p-4 bg-[#1a1d29] rounded-lg border border-gray-600 cursor-pointer hover:border-purple-400 transition-colors"
+                  onClick={handleAttackPatternClick}
+                >
                   <div className="flex items-center space-x-4">
                     <Badge className={`${getSeverityColor(attack.severity)} text-white`}>
                       {attack.severity}
@@ -236,7 +254,11 @@ const Index = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-white">ML Rule Suggestions</CardTitle>
-                <Button variant="link" className="text-purple-400 hover:text-purple-300">
+                <Button 
+                  variant="link" 
+                  className="text-purple-400 hover:text-purple-300"
+                  onClick={handleMLSuggestionClick}
+                >
                   View All Suggestions
                 </Button>
               </div>
@@ -249,13 +271,23 @@ const Index = () => {
                     <Badge className="bg-purple-500 text-white">{suggestion.confidence}% confidence</Badge>
                   </div>
                   <p className="text-sm text-gray-400 mb-3">{suggestion.description}</p>
-                  <Button 
-                    size="sm" 
-                    className="bg-purple-500 hover:bg-purple-600 text-white"
-                    onClick={() => setIsRuleGeneratorOpen(true)}
-                  >
-                    Generate Rule
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      className="bg-purple-500 hover:bg-purple-600 text-white"
+                      onClick={() => setIsRuleGeneratorOpen(true)}
+                    >
+                      Generate Rule
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
+                      onClick={handleMLSuggestionClick}
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>

@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -137,6 +136,30 @@ const Rules = () => {
       customOptions: "threshold:type both, track by_src, count 100, seconds 10;"
     }
   ]);
+
+  // Load ML rules from localStorage on component mount
+  useEffect(() => {
+    const loadMLRules = () => {
+      const storedMLRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      if (storedMLRules.length > 0) {
+        setRules(prev => {
+          const existingIds = prev.map(rule => rule.id);
+          const newMLRules = storedMLRules.filter((mlRule: Rule) => !existingIds.includes(mlRule.id));
+          return [...prev, ...newMLRules];
+        });
+      }
+    };
+
+    loadMLRules();
+    
+    // Listen for storage changes to update rules when ML rules are deployed
+    const handleStorageChange = () => {
+      loadMLRules();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
