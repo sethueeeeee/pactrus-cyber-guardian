@@ -20,7 +20,8 @@ import {
   Edit,
   Trash2,
   Activity,
-  User
+  User,
+  Check
 } from "lucide-react";
 import RuleGenerator from "@/components/RuleGenerator";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +59,7 @@ interface Rule {
   geolocation?: any;
   recommendedAction?: string;
   ruleTriggered?: string;
+  isDeployed?: boolean;
 }
 
 const Rules = () => {
@@ -84,7 +86,8 @@ const Rules = () => {
       action: "alert",
       protocol: "tcp",
       description: "Detects SQL injection attempts",
-      customOptions: "content:\"union select\"; nocase;"
+      customOptions: "content:\"union select\"; nocase;",
+      isDeployed: false
     },
     {
       id: 2,
@@ -101,7 +104,8 @@ const Rules = () => {
       action: "drop",
       protocol: "tcp",
       description: "Blocks SSH brute force attacks",
-      customOptions: "detection_filter:track by_src, count 5, seconds 60;"
+      customOptions: "detection_filter:track by_src, count 5, seconds 60;",
+      isDeployed: false
     },
     {
       id: 3,
@@ -118,7 +122,8 @@ const Rules = () => {
       action: "alert",
       protocol: "tcp",
       description: "Detects port scanning activities",
-      customOptions: "threshold:type threshold, track by_src, count 10, seconds 60;"
+      customOptions: "threshold:type threshold, track by_src, count 10, seconds 60;",
+      isDeployed: false
     },
     {
       id: 4,
@@ -135,7 +140,8 @@ const Rules = () => {
       action: "alert",
       protocol: "http",
       description: "Prevents XSS attacks",
-      customOptions: "content:\"<script\"; nocase;"
+      customOptions: "content:\"<script\"; nocase;",
+      isDeployed: false
     },
     {
       id: 5,
@@ -152,11 +158,11 @@ const Rules = () => {
       action: "drop",
       protocol: "tcp",
       description: "Filters DDoS traffic patterns",
-      customOptions: "threshold:type both, track by_src, count 100, seconds 10;"
+      customOptions: "threshold:type both, track by_src, count 100, seconds 10;",
+      isDeployed: false
     }
   ]);
 
-  // Load ML rules and Attack Pattern rules from localStorage on component mount
   useEffect(() => {
     const loadStoredRules = () => {
       const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
@@ -171,7 +177,6 @@ const Rules = () => {
 
     loadStoredRules();
     
-    // Listen for storage changes to update rules when new rules are added
     const handleStorageChange = () => {
       loadStoredRules();
     };
@@ -229,10 +234,8 @@ const Rules = () => {
   };
 
   const handleDeleteRule = (ruleId: number) => {
-    // Remove from local state
     setRules(prev => prev.filter(rule => rule.id !== ruleId));
     
-    // Remove from localStorage if it exists there
     const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
     const updatedStoredRules = storedRules.filter((rule: Rule) => rule.id !== ruleId);
     localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
@@ -241,18 +244,16 @@ const Rules = () => {
 
   const handleSaveRule = (ruleData: any) => {
     if (editingRule) {
-      // Update existing rule
       const updatedRule = {
         ...editingRule,
         ...ruleData,
-        id: editingRule.id // Keep the original ID
+        id: editingRule.id
       };
       
       setRules(prev => prev.map(rule => 
         rule.id === editingRule.id ? updatedRule : rule
       ));
       
-      // Update in localStorage if it exists there
       const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
       const updatedStoredRules = storedRules.map((rule: Rule) => 
         rule.id === editingRule.id ? updatedRule : rule
@@ -261,13 +262,13 @@ const Rules = () => {
       window.dispatchEvent(new Event('storage'));
       
     } else {
-      // Add new rule
       const newRule: Rule = {
         id: Date.now() + Math.random(),
         ...ruleData,
         status: "Pending",
         confidence: 95,
-        created: new Date().toISOString().split('T')[0]
+        created: new Date().toISOString().split('T')[0],
+        isDeployed: false
       };
       setRules(prev => [...prev, newRule]);
     }
@@ -283,19 +284,17 @@ const Rules = () => {
         description: "Sending rule to Ubuntu Suricata server in VMware...",
       });
 
-      // Simulate deployment to Suricata/Ubuntu server
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       setRules(prev => prev.map(rule => 
         rule.id === ruleId 
-          ? { ...rule, status: "Active" }
+          ? { ...rule, status: "Active", isDeployed: true }
           : rule
       ));
 
-      // Update in localStorage if it exists there
       const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
       const updatedStoredRules = storedRules.map((rule: Rule) => 
-        rule.id === ruleId ? { ...rule, status: "Active" } : rule
+        rule.id === ruleId ? { ...rule, status: "Active", isDeployed: true } : rule
       );
       localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
       window.dispatchEvent(new Event('storage'));
@@ -326,7 +325,6 @@ const Rules = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
-      {/* Fixed Navigation Bar */}
       <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
@@ -352,7 +350,6 @@ const Rules = () => {
       </nav>
 
       <div className="p-6 space-y-6 pt-24">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">Security Rules</h1>
@@ -367,7 +364,6 @@ const Rules = () => {
           </Button>
         </div>
 
-        {/* Search and Filter Bar */}
         <Card className="bg-[#2d3748] border-gray-700">
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
@@ -399,7 +395,6 @@ const Rules = () => {
           </CardContent>
         </Card>
 
-        {/* Bulk Actions */}
         {selectedRules.length > 0 && (
           <Card className="bg-[#2d3748] border-gray-700">
             <CardContent className="p-4">
@@ -423,7 +418,6 @@ const Rules = () => {
           </Card>
         )}
 
-        {/* Rules Table */}
         <Card className="bg-[#2d3748] border-gray-700">
           <CardHeader>
             <CardTitle className="text-white">Rules ({filteredRules.length})</CardTitle>
@@ -501,13 +495,24 @@ const Rules = () => {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            className="bg-green-500 hover:bg-green-600"
-                            onClick={() => handleDeployRule(rule.id)}
-                          >
-                            Deploy
-                          </Button>
+                          {rule.isDeployed ? (
+                            <Button 
+                              size="sm" 
+                              className="bg-gray-500 cursor-not-allowed"
+                              disabled
+                            >
+                              <Check className="mr-1 h-4 w-4" />
+                              Deployed
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              className="bg-green-500 hover:bg-green-600"
+                              onClick={() => handleDeployRule(rule.id)}
+                            >
+                              Deploy
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -121,18 +121,20 @@ const Alerts = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
-      {/* Navigation Bar */}
-      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4">
+      {/* Fixed Navigation Bar */}
+      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-purple-400" />
-              <span className="text-xl font-bold text-white">CyberGuard</span>
+              <span className="text-xl font-bold text-white">Pactrus</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <Link to="/" className="text-gray-300 hover:text-white">Dashboard</Link>
               <Link to="/rules" className="text-gray-300 hover:text-white">Security Rules</Link>
+              <Link to="/ml-suggestions" className="text-gray-300 hover:text-white">ML Suggestions</Link>
               <Link to="/alerts" className="text-purple-400 hover:text-purple-300 font-medium">Alerts</Link>
+              <Link to="/attack-patterns" className="text-gray-300 hover:text-white">Attack Patterns</Link>
               <Link to="/monitoring" className="text-gray-300 hover:text-white">Monitoring</Link>
               <Link to="/telegram" className="text-gray-300 hover:text-white">Telegram</Link>
               <Link to="/settings" className="text-gray-300 hover:text-white">Settings</Link>
@@ -144,7 +146,7 @@ const Alerts = () => {
         </div>
       </nav>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 pt-24">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
