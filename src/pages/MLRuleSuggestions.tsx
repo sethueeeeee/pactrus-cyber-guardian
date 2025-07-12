@@ -165,9 +165,9 @@ const MLRuleSuggestions = () => {
           : rule
       ));
 
-      // Add to Security Rules with complete data
+      // Create a unique security rule with complete ML rule data
       const securityRule = {
-        id: Date.now(),
+        id: Date.now() + Math.random(), // Ensure unique ID
         name: deployedRule.title,
         attackType: deployedRule.attackType,
         status: "Active",
@@ -181,13 +181,21 @@ const MLRuleSuggestions = () => {
         action: deployedRule.action || "alert",
         protocol: deployedRule.protocol || "tcp",
         description: deployedRule.description,
-        customOptions: deployedRule.customOptions || ""
+        customOptions: deployedRule.customOptions || "",
+        mlRuleId: deployedRule.id, // Link back to original ML rule
+        suggestedRule: deployedRule.suggestedRule,
+        sourcePattern: deployedRule.sourcePattern,
+        targetPattern: deployedRule.targetPattern
       };
       
-      // Check for duplicates before adding
+      // Check for duplicates more strictly
       const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
       const isDuplicate = existingRules.some((rule: any) => 
-        rule.name === securityRule.name && rule.attackType === securityRule.attackType
+        rule.mlRuleId === deployedRule.id || 
+        (rule.name === securityRule.name && 
+         rule.attackType === securityRule.attackType && 
+         rule.sourceIp === securityRule.sourceIp &&
+         rule.targetIp === securityRule.targetIp)
       );
       
       if (!isDuplicate) {
@@ -195,12 +203,18 @@ const MLRuleSuggestions = () => {
         
         // Trigger storage event for other components
         window.dispatchEvent(new Event('storage'));
+        
+        toast({
+          title: "Rule Deployed Successfully",
+          description: "Rule has been deployed to Suricata server and added to Security Rules.",
+        });
+      } else {
+        toast({
+          title: "Rule Already Exists",
+          description: "This ML rule has already been deployed to Security Rules.",
+          variant: "destructive"
+        });
       }
-
-      toast({
-        title: "Rule Deployed Successfully",
-        description: "Rule has been deployed to Suricata server and added to Security Rules.",
-      });
 
     } catch (error) {
       toast({

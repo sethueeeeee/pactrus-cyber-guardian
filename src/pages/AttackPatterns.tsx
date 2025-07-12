@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +57,7 @@ const AttackPatterns = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
   
-  const [attacks] = useState<AttackDetail[]>([
+  const [attacks, setAttacks] = useState<AttackDetail[]>([
     {
       id: 1,
       type: "SQL Injection",
@@ -207,7 +208,14 @@ const AttackPatterns = () => {
     }
   };
 
-  const blockIP = (ip: string) => {
+  const blockIP = (attackId: number, ip: string) => {
+    // Update the attack status to blocked
+    setAttacks(prev => prev.map(attack => 
+      attack.id === attackId 
+        ? { ...attack, status: "blocked" as const }
+        : attack
+    ));
+
     toast({
       title: "IP Address Blocked",
       description: `${ip} has been added to the firewall blacklist.`,
@@ -215,13 +223,14 @@ const AttackPatterns = () => {
   };
 
   const createRule = (attack: AttackDetail) => {
+    const currentTime = new Date();
     const newRule = {
-      id: Date.now(),
+      id: Date.now() + Math.random(), // Ensure unique ID
       name: `Block ${attack.type} from ${attack.sourceIp}`,
       attackType: attack.type,
       status: "Pending",
       confidence: 90,
-      created: new Date().toISOString().split('T')[0],
+      created: currentTime.toISOString().split('T')[0],
       priority: attack.severity,
       sourceIp: attack.sourceIp,
       sourcePort: attack.sourcePort,
@@ -229,19 +238,39 @@ const AttackPatterns = () => {
       targetPort: attack.targetPort,
       action: attack.severity === "Critical" ? "drop" : "alert",
       protocol: attack.protocol.toLowerCase(),
-      description: `Auto-generated rule to block ${attack.type} attacks from ${attack.sourceIp}`,
-      customOptions: `msg:"${attack.type} blocked"; classtype:attempted-admin;`
+      description: `Auto-generated rule to block ${attack.type} attacks from ${attack.sourceIp}. ${attack.description}`,
+      customOptions: `msg:"${attack.type} blocked from ${attack.sourceIp}"; classtype:attempted-admin;`,
+      // Include attack pattern specific data
+      attackPatternId: attack.id,
+      sourceCountry: attack.sourceCountry,
+      targetService: attack.targetService,
+      severity: attack.severity,
+      packets: attack.packets,
+      bytes: attack.bytes,
+      duration: attack.duration,
+      threatIntel: attack.threatIntel,
+      geolocation: attack.geolocation,
+      recommendedAction: attack.recommendedAction,
+      ruleTriggered: attack.ruleTriggered
     };
 
     // Add to Security Rules
     const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
     const isDuplicate = existingRules.some((rule: any) => 
-      rule.sourceIp === newRule.sourceIp && rule.attackType === newRule.attackType
+      rule.attackPatternId === attack.id ||
+      (rule.sourceIp === newRule.sourceIp && rule.attackType === newRule.attackType)
     );
     
     if (!isDuplicate) {
       localStorage.setItem('securityRules', JSON.stringify([...existingRules, newRule]));
       window.dispatchEvent(new Event('storage'));
+      
+      // Update attack status to show a rule was created
+      setAttacks(prev => prev.map(att => 
+        att.id === attack.id 
+          ? { ...att, status: "mitigated" as const }
+          : att
+      ));
       
       toast({
         title: "Security Rule Created",
@@ -433,10 +462,11 @@ const AttackPatterns = () => {
                       <Button 
                         size="sm"
                         className="bg-red-500 hover:bg-red-600"
-                        onClick={() => blockIP(attack.sourceIp)}
+                        onClick={() => blockIP(attack.id, attack.sourceIp)}
+                        disabled={attack.status === "blocked"}
                       >
                         <Ban className="mr-2 h-4 w-4" />
-                        Block IP
+                        {attack.status === "blocked" ? "IP Blocked" : "Block IP"}
                       </Button>
                       <Button 
                         size="sm"

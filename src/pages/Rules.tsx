@@ -41,6 +41,23 @@ interface Rule {
   protocol?: string;
   description?: string;
   customOptions?: string;
+  // ML Rule specific fields
+  mlRuleId?: number;
+  suggestedRule?: string;
+  sourcePattern?: string;
+  targetPattern?: string;
+  // Attack Pattern specific fields
+  attackPatternId?: number;
+  sourceCountry?: string;
+  targetService?: string;
+  severity?: string;
+  packets?: number;
+  bytes?: number;
+  duration?: string;
+  threatIntel?: any;
+  geolocation?: any;
+  recommendedAction?: string;
+  ruleTriggered?: string;
 }
 
 const Rules = () => {
@@ -139,24 +156,24 @@ const Rules = () => {
     }
   ]);
 
-  // Load ML rules from localStorage on component mount
+  // Load ML rules and Attack Pattern rules from localStorage on component mount
   useEffect(() => {
-    const loadMLRules = () => {
-      const storedMLRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-      if (storedMLRules.length > 0) {
+    const loadStoredRules = () => {
+      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      if (storedRules.length > 0) {
         setRules(prev => {
           const existingIds = prev.map(rule => rule.id);
-          const newMLRules = storedMLRules.filter((mlRule: Rule) => !existingIds.includes(mlRule.id));
-          return [...prev, ...newMLRules];
+          const newStoredRules = storedRules.filter((storedRule: Rule) => !existingIds.includes(storedRule.id));
+          return [...prev, ...newStoredRules];
         });
       }
     };
 
-    loadMLRules();
+    loadStoredRules();
     
-    // Listen for storage changes to update rules when ML rules are deployed
+    // Listen for storage changes to update rules when new rules are added
     const handleStorageChange = () => {
-      loadMLRules();
+      loadStoredRules();
     };
     
     window.addEventListener('storage', handleStorageChange);
@@ -206,30 +223,47 @@ const Rules = () => {
   };
 
   const handleEditRule = (rule: Rule) => {
+    console.log('Editing rule:', rule); // Debug log
     setEditingRule(rule);
     setIsRuleGeneratorOpen(true);
   };
 
   const handleDeleteRule = (ruleId: number) => {
+    // Remove from local state
     setRules(prev => prev.filter(rule => rule.id !== ruleId));
+    
+    // Remove from localStorage if it exists there
+    const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+    const updatedStoredRules = storedRules.filter((rule: Rule) => rule.id !== ruleId);
+    localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleSaveRule = (ruleData: any) => {
     if (editingRule) {
       // Update existing rule
+      const updatedRule = {
+        ...editingRule,
+        ...ruleData,
+        id: editingRule.id // Keep the original ID
+      };
+      
       setRules(prev => prev.map(rule => 
-        rule.id === editingRule.id 
-          ? { 
-              ...rule, 
-              ...ruleData,
-              id: rule.id // Keep the original ID
-            }
-          : rule
+        rule.id === editingRule.id ? updatedRule : rule
       ));
+      
+      // Update in localStorage if it exists there
+      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      const updatedStoredRules = storedRules.map((rule: Rule) => 
+        rule.id === editingRule.id ? updatedRule : rule
+      );
+      localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
+      window.dispatchEvent(new Event('storage'));
+      
     } else {
       // Add new rule
       const newRule: Rule = {
-        id: Math.max(...rules.map(r => r.id)) + 1,
+        id: Date.now() + Math.random(),
         ...ruleData,
         status: "Pending",
         confidence: 95,
@@ -257,6 +291,14 @@ const Rules = () => {
           ? { ...rule, status: "Active" }
           : rule
       ));
+
+      // Update in localStorage if it exists there
+      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      const updatedStoredRules = storedRules.map((rule: Rule) => 
+        rule.id === ruleId ? { ...rule, status: "Active" } : rule
+      );
+      localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
+      window.dispatchEvent(new Event('storage'));
 
       toast({
         title: "Rule Deployed Successfully",
@@ -419,7 +461,11 @@ const Rules = () => {
                             onChange={() => handleSelectRule(rule.id)}
                             className="mr-3"
                           />
-                          {rule.name}
+                          <div>
+                            {rule.name}
+                            {rule.mlRuleId && <Badge className="ml-2 bg-purple-500 text-xs">ML</Badge>}
+                            {rule.attackPatternId && <Badge className="ml-2 bg-blue-500 text-xs">AP</Badge>}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
