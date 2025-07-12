@@ -1,9 +1,11 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Shield, 
   Activity, 
@@ -14,22 +16,64 @@ import {
   Database,
   Zap,
   Monitor,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import RuleGenerator from "@/components/RuleGenerator";
 
 const Index = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isRuleGeneratorOpen, setIsRuleGeneratorOpen] = useState(false);
+  const [attackScrollIndex, setAttackScrollIndex] = useState(0);
+  const [mlScrollIndex, setMLScrollIndex] = useState(0);
   const navigate = useNavigate();
 
-  // Sample data for the dashboard
-  const stats = {
-    generatedRules: { count: 47, change: "+8 today" },
-    deployedRules: { count: 42, pending: 5 },
-    mlSuggestions: { count: 12, description: "based on recent attacks" },
-    activeAlerts: { count: 3, critical: 2 }
-  };
+  // Real-time data management
+  const [stats, setStats] = useState(() => {
+    const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+    const storedMLRules = JSON.parse(localStorage.getItem('mlRules') || '[]');
+    const deployedMLCount = storedMLRules.filter((rule: any) => rule.status === 'deployed').length;
+    const pendingMLCount = storedMLRules.filter((rule: any) => rule.status === 'pending').length;
+    
+    return {
+      generatedRules: { count: storedRules.length + 47, change: `+${storedRules.length > 0 ? storedRules.length : 8} today` },
+      deployedRules: { count: storedRules.filter((rule: any) => rule.status === 'Active').length + 42, pending: storedRules.filter((rule: any) => rule.status === 'Pending').length + 5 },
+      mlSuggestions: { count: pendingMLCount + 12, description: "based on recent attacks" },
+      activeAlerts: { count: 3, critical: 2 }
+    };
+  });
+
+  // Update stats when localStorage changes
+  useEffect(() => {
+    const updateStats = () => {
+      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      const storedMLRules = JSON.parse(localStorage.getItem('mlRules') || '[]');
+      const deployedMLCount = storedMLRules.filter((rule: any) => rule.status === 'deployed').length;
+      const pendingMLCount = storedMLRules.filter((rule: any) => rule.status === 'pending').length;
+      
+      setStats({
+        generatedRules: { count: storedRules.length + 47, change: `+${storedRules.length > 0 ? storedRules.length : 8} today` },
+        deployedRules: { count: storedRules.filter((rule: any) => rule.status === 'Active').length + 42, pending: storedRules.filter((rule: any) => rule.status === 'Pending').length + 5 },
+        mlSuggestions: { count: pendingMLCount + 12, description: "based on recent attacks" },
+        activeAlerts: { count: 3, critical: 2 }
+      });
+    };
+
+    updateStats();
+    
+    const handleStorageChange = () => {
+      updateStats();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    const interval = setInterval(updateStats, 1000); // Update every second
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
 
   const recentAttacks = [
     {
@@ -37,7 +81,7 @@ const Index = () => {
       sourceIp: "203.0.113.45",
       targetIp: "192.168.1.100",
       severity: "Critical",
-      timestamp: "2 min ago",
+      timestamp: new Date().toLocaleString(),
       mlSuggested: true
     },
     {
@@ -45,7 +89,7 @@ const Index = () => {
       sourceIp: "198.51.100.22",
       targetIp: "192.168.1.0/24",
       severity: "Medium",
-      timestamp: "15 min ago",
+      timestamp: new Date(Date.now() - 15 * 60000).toLocaleString(),
       mlSuggested: false
     },
     {
@@ -53,8 +97,24 @@ const Index = () => {
       sourceIp: "185.220.101.33",
       targetIp: "192.168.1.50",
       severity: "High",
-      timestamp: "28 min ago",
+      timestamp: new Date(Date.now() - 28 * 60000).toLocaleString(),
       mlSuggested: true
+    },
+    {
+      type: "DDoS Attack",
+      sourceIp: "Multiple IPs",
+      targetIp: "192.168.1.10",
+      severity: "Critical",
+      timestamp: new Date(Date.now() - 45 * 60000).toLocaleString(),
+      mlSuggested: true
+    },
+    {
+      type: "XSS Attempt",
+      sourceIp: "45.132.75.19",
+      targetIp: "192.168.1.25",
+      severity: "High",
+      timestamp: new Date(Date.now() - 60 * 60000).toLocaleString(),
+      mlSuggested: false
     }
   ];
 
@@ -68,6 +128,16 @@ const Index = () => {
       title: "Rate limit SSH connections",
       confidence: 88,
       description: "Unusual SSH connection patterns detected"
+    },
+    {
+      title: "Block DDoS traffic patterns",
+      confidence: 92,
+      description: "High volume traffic detected from botnet sources"
+    },
+    {
+      title: "Detect malware communication",
+      confidence: 87,
+      description: "Suspicious outbound connections to known C&C servers"
     }
   ];
 
@@ -112,15 +182,31 @@ const Index = () => {
     navigate("/attack-patterns");
   };
 
+  const scrollAttacks = (direction: 'left' | 'right') => {
+    if (direction === 'left' && attackScrollIndex > 0) {
+      setAttackScrollIndex(attackScrollIndex - 1);
+    } else if (direction === 'right' && attackScrollIndex < recentAttacks.length - 3) {
+      setAttackScrollIndex(attackScrollIndex + 1);
+    }
+  };
+
+  const scrollMLSuggestions = (direction: 'left' | 'right') => {
+    if (direction === 'left' && mlScrollIndex > 0) {
+      setMLScrollIndex(mlScrollIndex - 1);
+    } else if (direction === 'right' && mlScrollIndex < mlSuggestions.length - 2) {
+      setMLScrollIndex(mlScrollIndex + 1);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
-      {/* Navigation Bar */}
-      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4">
+      {/* Fixed Navigation Bar */}
+      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-purple-400" />
-              <span className="text-xl font-bold text-white">CyberGuard</span>
+              <span className="text-xl font-bold text-white">Pactrus</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <Link to="/" className="text-purple-400 hover:text-purple-300 font-medium">Dashboard</Link>
@@ -155,8 +241,8 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <div className="p-6 space-y-6">
+      {/* Main Content with top padding for fixed header */}
+      <div className="p-6 space-y-6 pt-24">
         {/* Dashboard Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="bg-[#2d3748] border-gray-700">
@@ -204,44 +290,60 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Recent Attack Patterns */}
+        {/* Recent Attack Patterns with Scroll */}
         <Card className="bg-[#2d3748] border-gray-700">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Recent Attack Patterns</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
-                onClick={handleAttackPatternClick}
-              >
-                View Detailed Analysis
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => scrollAttacks('left')}
+                  disabled={attackScrollIndex === 0}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => scrollAttacks('right')}
+                  disabled={attackScrollIndex >= recentAttacks.length - 3}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-purple-400 text-purple-400 hover:bg-purple-400 hover:text-white"
+                  onClick={handleAttackPatternClick}
+                >
+                  View Detailed Analysis
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentAttacks.map((attack, index) => (
+            <div className="flex gap-4 overflow-hidden">
+              {recentAttacks.slice(attackScrollIndex, attackScrollIndex + 3).map((attack, index) => (
                 <div 
                   key={index} 
-                  className="flex items-center justify-between p-4 bg-[#1a1d29] rounded-lg border border-gray-600 cursor-pointer hover:border-purple-400 transition-colors"
+                  className="flex-1 min-w-0 p-4 bg-[#1a1d29] rounded-lg border border-gray-600 cursor-pointer hover:border-purple-400 transition-colors"
                   onClick={handleAttackPatternClick}
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center justify-between mb-2">
                     <Badge className={`${getSeverityColor(attack.severity)} text-white`}>
                       {attack.severity}
                     </Badge>
-                    <div>
-                      <div className="font-medium text-white">{attack.type}</div>
-                      <div className="text-sm text-gray-400">
-                        {attack.sourceIp} → {attack.targetIp}
-                      </div>
-                    </div>
                     {attack.mlSuggested && (
                       <Badge className="bg-purple-500 text-white">ML Suggested</Badge>
                     )}
                   </div>
-                  <div className="text-sm text-gray-400">{attack.timestamp}</div>
+                  <div className="font-medium text-white mb-1">{attack.type}</div>
+                  <div className="text-sm text-gray-400 mb-2">
+                    {attack.sourceIp} → {attack.targetIp}
+                  </div>
+                  <div className="text-xs text-gray-500">{attack.timestamp}</div>
                 </div>
               ))}
             </div>
@@ -249,22 +351,40 @@ const Index = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* ML Rule Suggestions */}
+          {/* ML Rule Suggestions with Scroll */}
           <Card className="bg-[#2d3748] border-gray-700">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-white">ML Rule Suggestions</CardTitle>
-                <Button 
-                  variant="link" 
-                  className="text-purple-400 hover:text-purple-300"
-                  onClick={handleMLSuggestionClick}
-                >
-                  View All Suggestions
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => scrollMLSuggestions('left')}
+                    disabled={mlScrollIndex === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => scrollMLSuggestions('right')}
+                    disabled={mlScrollIndex >= mlSuggestions.length - 2}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="link" 
+                    className="text-purple-400 hover:text-purple-300"
+                    onClick={handleMLSuggestionClick}
+                  >
+                    View All
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {mlSuggestions.map((suggestion, index) => (
+              {mlSuggestions.slice(mlScrollIndex, mlScrollIndex + 2).map((suggestion, index) => (
                 <div key={index} className="p-4 bg-[#1a1d29] rounded-lg border border-gray-600">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-white">{suggestion.title}</h3>

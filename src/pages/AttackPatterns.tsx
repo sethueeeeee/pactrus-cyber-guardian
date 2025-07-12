@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,7 +67,7 @@ const AttackPatterns = () => {
       targetPort: "80",
       targetService: "HTTP Web Server",
       severity: "Critical",
-      timestamp: "2024-01-15 14:32:15",
+      timestamp: new Date().toLocaleString(),
       duration: "00:02:45",
       packets: 127,
       bytes: 15420,
@@ -215,11 +214,46 @@ const AttackPatterns = () => {
     });
   };
 
-  const createRule = (attackType: string) => {
-    toast({
-      title: "Creating Security Rule",
-      description: `Generating Suricata rule for ${attackType} protection.`,
-    });
+  const createRule = (attack: AttackDetail) => {
+    const newRule = {
+      id: Date.now(),
+      name: `Block ${attack.type} from ${attack.sourceIp}`,
+      attackType: attack.type,
+      status: "Pending",
+      confidence: 90,
+      created: new Date().toISOString().split('T')[0],
+      priority: attack.severity,
+      sourceIp: attack.sourceIp,
+      sourcePort: attack.sourcePort,
+      targetIp: attack.targetIp,
+      targetPort: attack.targetPort,
+      action: attack.severity === "Critical" ? "drop" : "alert",
+      protocol: attack.protocol.toLowerCase(),
+      description: `Auto-generated rule to block ${attack.type} attacks from ${attack.sourceIp}`,
+      customOptions: `msg:"${attack.type} blocked"; classtype:attempted-admin;`
+    };
+
+    // Add to Security Rules
+    const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+    const isDuplicate = existingRules.some((rule: any) => 
+      rule.sourceIp === newRule.sourceIp && rule.attackType === newRule.attackType
+    );
+    
+    if (!isDuplicate) {
+      localStorage.setItem('securityRules', JSON.stringify([...existingRules, newRule]));
+      window.dispatchEvent(new Event('storage'));
+      
+      toast({
+        title: "Security Rule Created",
+        description: `Rule to block ${attack.type} has been added to Security Rules.`,
+      });
+    } else {
+      toast({
+        title: "Rule Already Exists",
+        description: "A similar rule already exists in Security Rules.",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredAttacks = attacks.filter(attack => {
@@ -232,20 +266,23 @@ const AttackPatterns = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
-      {/* Navigation Bar */}
-      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4">
+      {/* Fixed Navigation Bar */}
+      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-purple-400" />
-              <span className="text-xl font-bold text-white">CyberGuard</span>
+              <span className="text-xl font-bold text-white">Pactrus</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <Link to="/" className="text-gray-300 hover:text-white">Dashboard</Link>
               <Link to="/rules" className="text-gray-300 hover:text-white">Security Rules</Link>
-              <Link to="/attack-patterns" className="text-purple-400 hover:text-purple-300 font-medium">Attack Patterns</Link>
+              <Link to="/ml-suggestions" className="text-gray-300 hover:text-white">ML Suggestions</Link>
               <Link to="/alerts" className="text-gray-300 hover:text-white">Alerts</Link>
+              <Link to="/attack-patterns" className="text-purple-400 hover:text-purple-300 font-medium">Attack Patterns</Link>
               <Link to="/monitoring" className="text-gray-300 hover:text-white">Monitoring</Link>
+              <Link to="/telegram" className="text-gray-300 hover:text-white">Telegram</Link>
+              <Link to="/settings" className="text-gray-300 hover:text-white">Settings</Link>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -254,7 +291,7 @@ const AttackPatterns = () => {
         </div>
       </nav>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 pt-24">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -404,7 +441,7 @@ const AttackPatterns = () => {
                       <Button 
                         size="sm"
                         className="bg-purple-500 hover:bg-purple-600"
-                        onClick={() => createRule(attack.type)}
+                        onClick={() => createRule(attack)}
                       >
                         <Activity className="mr-2 h-4 w-4" />
                         Create Rule

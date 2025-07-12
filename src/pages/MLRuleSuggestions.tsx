@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,13 @@ interface MLRule {
   status: "pending" | "deployed" | "rejected";
   createdAt: string;
   deployedAt?: string;
+  sourceIp?: string;
+  sourcePort?: string;
+  targetIp?: string;
+  targetPort?: string;
+  action?: string;
+  protocol?: string;
+  customOptions?: string;
 }
 
 const MLRuleSuggestions = () => {
@@ -47,7 +53,14 @@ const MLRuleSuggestions = () => {
       targetPattern: "192.168.1.100:80/login",
       severity: "Critical",
       status: "pending",
-      createdAt: "2024-01-15 10:30:00"
+      createdAt: new Date().toLocaleString(),
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "192.168.1.0/24",
+      targetPort: "80",
+      action: "alert",
+      protocol: "tcp",
+      customOptions: "content:\"union select\"; nocase; classtype:web-application-attack;"
     },
     {
       id: 2,
@@ -60,7 +73,14 @@ const MLRuleSuggestions = () => {
       targetPattern: "192.168.1.50:22",
       severity: "High",
       status: "pending",
-      createdAt: "2024-01-15 09:15:00"
+      createdAt: new Date(Date.now() - 15 * 60000).toLocaleString(),
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "22",
+      action: "drop",
+      protocol: "tcp",
+      customOptions: "detection_filter:track by_src, count 5, seconds 60; classtype:attempted-admin;"
     },
     {
       id: 3,
@@ -73,8 +93,15 @@ const MLRuleSuggestions = () => {
       targetPattern: "192.168.1.0/24",
       severity: "Critical",
       status: "deployed",
-      createdAt: "2024-01-14 16:45:00",
-      deployedAt: "2024-01-14 17:00:00"
+      createdAt: new Date(Date.now() - 24 * 60 * 60000).toLocaleString(),
+      deployedAt: new Date(Date.now() - 23 * 60 * 60000).toLocaleString(),
+      sourceIp: "any",
+      sourcePort: "any",
+      targetIp: "any",
+      targetPort: "any",
+      action: "drop",
+      protocol: "tcp",
+      customOptions: "threshold:type both, track by_src, count 100, seconds 10; classtype:denial-of-service;"
     },
     {
       id: 4,
@@ -87,7 +114,14 @@ const MLRuleSuggestions = () => {
       targetPattern: "External C&C servers",
       severity: "High",
       status: "pending",
-      createdAt: "2024-01-14 14:20:00"
+      createdAt: new Date(Date.now() - 2 * 60 * 60000).toLocaleString(),
+      sourceIp: "192.168.1.0/24",
+      sourcePort: "any",
+      targetIp: "!192.168.1.0/24",
+      targetPort: "any",
+      action: "alert",
+      protocol: "tcp",
+      customOptions: "content:\"POST\"; http_method; classtype:trojan-activity;"
     }
   ]);
 
@@ -111,55 +145,62 @@ const MLRuleSuggestions = () => {
 
   const deployRule = async (ruleId: number) => {
     try {
-      // Simulate deployment to Suricata/Ubuntu server
       toast({
         title: "Deploying Rule",
-        description: "Sending rule to Suricata server...",
+        description: "Sending rule to Suricata server in VMware...",
       });
 
-      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 2000));
+
+      const deployedRule = mlRules.find(rule => rule.id === ruleId);
+      if (!deployedRule) return;
 
       setMlRules(prev => prev.map(rule => 
         rule.id === ruleId 
           ? { 
               ...rule, 
               status: "deployed" as const,
-              deployedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
+              deployedAt: new Date().toLocaleString()
             }
           : rule
       ));
+
+      // Add to Security Rules with complete data
+      const securityRule = {
+        id: Date.now(),
+        name: deployedRule.title,
+        attackType: deployedRule.attackType,
+        status: "Active",
+        confidence: deployedRule.confidence,
+        created: new Date().toISOString().split('T')[0],
+        priority: deployedRule.severity,
+        sourceIp: deployedRule.sourceIp || "any",
+        sourcePort: deployedRule.sourcePort || "any",
+        targetIp: deployedRule.targetIp || "any",
+        targetPort: deployedRule.targetPort || "80",
+        action: deployedRule.action || "alert",
+        protocol: deployedRule.protocol || "tcp",
+        description: deployedRule.description,
+        customOptions: deployedRule.customOptions || ""
+      };
+      
+      // Check for duplicates before adding
+      const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+      const isDuplicate = existingRules.some((rule: any) => 
+        rule.name === securityRule.name && rule.attackType === securityRule.attackType
+      );
+      
+      if (!isDuplicate) {
+        localStorage.setItem('securityRules', JSON.stringify([...existingRules, securityRule]));
+        
+        // Trigger storage event for other components
+        window.dispatchEvent(new Event('storage'));
+      }
 
       toast({
         title: "Rule Deployed Successfully",
         description: "Rule has been deployed to Suricata server and added to Security Rules.",
       });
-
-      // Add to Security Rules (simulate by updating localStorage or global state)
-      const deployedRule = mlRules.find(rule => rule.id === ruleId);
-      if (deployedRule) {
-        const securityRule = {
-          id: Date.now(),
-          name: deployedRule.title,
-          attackType: deployedRule.attackType,
-          status: "Active",
-          confidence: deployedRule.confidence,
-          created: new Date().toISOString().split('T')[0],
-          priority: deployedRule.severity,
-          sourceIp: "any",
-          sourcePort: "any",
-          targetIp: "any", 
-          targetPort: "80",
-          action: "alert",
-          protocol: "tcp",
-          description: deployedRule.description,
-          customOptions: ""
-        };
-        
-        // Store in localStorage to persist across page refreshes
-        const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-        localStorage.setItem('securityRules', JSON.stringify([...existingRules, securityRule]));
-      }
 
     } catch (error) {
       toast({
@@ -189,19 +230,20 @@ const MLRuleSuggestions = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1d29] text-white">
-      {/* Navigation Bar */}
-      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4">
+      {/* Fixed Navigation Bar */}
+      <nav className="bg-[#2d3748] border-b border-gray-700 px-6 py-4 fixed top-0 left-0 right-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-8">
             <div className="flex items-center space-x-2">
               <Shield className="h-8 w-8 text-purple-400" />
-              <span className="text-xl font-bold text-white">CyberGuard</span>
+              <span className="text-xl font-bold text-white">Pactrus</span>
             </div>
             <div className="hidden md:flex space-x-6">
               <Link to="/" className="text-gray-300 hover:text-white">Dashboard</Link>
               <Link to="/rules" className="text-gray-300 hover:text-white">Security Rules</Link>
-              <Link to="/ml-suggestions" className="text-purple-400 hover:text-purple-300 font-medium">ML Rule Suggestions</Link>
+              <Link to="/ml-suggestions" className="text-purple-400 hover:text-purple-300 font-medium">ML Suggestions</Link>
               <Link to="/alerts" className="text-gray-300 hover:text-white">Alerts</Link>
+              <Link to="/attack-patterns" className="text-gray-300 hover:text-white">Attack Patterns</Link>
               <Link to="/monitoring" className="text-gray-300 hover:text-white">Monitoring</Link>
               <Link to="/telegram" className="text-gray-300 hover:text-white">Telegram</Link>
               <Link to="/settings" className="text-gray-300 hover:text-white">Settings</Link>
@@ -213,7 +255,7 @@ const MLRuleSuggestions = () => {
         </div>
       </nav>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 pt-24">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
