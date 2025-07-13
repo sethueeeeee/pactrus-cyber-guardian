@@ -34,22 +34,22 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <Card className="w-full max-w-md shadow-lg bg-white">
         <CardHeader className="space-y-1 text-center">
           <div className="flex items-center justify-center mb-4">
             <Shield className="h-10 w-10 text-blue-600 mr-2" />
             <h1 className="text-2xl font-bold text-gray-900">Pactrus</h1>
           </div>
-          <CardTitle className="text-xl">Sign in to your account</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl text-gray-900">Sign in to your account</CardTitle>
+          <CardDescription className="text-gray-600">
             Enter your credentials to access the Cyber Guardian platform
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username" className="text-gray-700">Username</Label>
               <Input
                 id="username"
                 type="text"
@@ -58,11 +58,12 @@ const Login = () => {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={isLoading}
+                className="border-gray-300 focus:border-blue-600 focus:ring-blue-600"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-gray-700">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -72,13 +73,13 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="pr-10"
+                  className="pr-10 border-gray-300 focus:border-blue-600 focus:ring-blue-600"
                 />
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-gray-500"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
@@ -93,17 +94,16 @@ const Login = () => {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800 font-medium mb-1">Demo Credentials:</p>
-            <p className="text-sm text-blue-700">Username: admin</p>
-            <p className="text-sm text-blue-700">Password: pactrus123</p>
+          <div className="mt-6 text-center text-sm text-gray-600">
+            <p className="mb-1"><strong>Username:</strong> admin</p>
+            <p><strong>Password:</strong> pactrus123</p>
           </div>
         </CardContent>
       </Card>

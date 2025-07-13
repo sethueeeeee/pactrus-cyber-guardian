@@ -2,13 +2,12 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Shield } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { LogOut } from "lucide-react";
 
 const Index = () => {
   const { logout } = useAuth();
-  const { toast } = useToast();
   const [alerts, setAlerts] = useState([
     {
       id: 1,
