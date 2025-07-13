@@ -10,77 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { logout } = useAuth();
-  
-  const [alerts, setAlerts] = useState([
-    {
-      id: 1,
-      title: "Potential Phishing Attack",
-      description: "Detected suspicious email activity targeting multiple users.",
-      severity: "High",
-      status: "Open",
-      time: "2 minutes ago"
-    },
-    {
-      id: 2,
-      title: "Unusual Network Traffic",
-      description: "Observed a spike in outbound traffic from server X.",
-      severity: "Medium",
-      status: "Investigating",
-      time: "15 minutes ago"
-    },
-    {
-      id: 3,
-      title: "Unauthorized Access Attempt",
-      description: "Failed login attempts detected from an unknown IP address.",
-      severity: "Low",
-      status: "Resolved",
-      time: "1 hour ago"
-    },
-  ]);
-
-  const [attackPatterns, setAttackPatterns] = useState([
-    {
-      id: 1,
-      type: "SQL Injection",
-      source: "185.220.101.33",
-      target: "web-server-01",
-      severity: "Critical",
-      blocked: true,
-      time: "3 minutes ago"
-    },
-    {
-      id: 2,
-      type: "DDoS Attack",
-      source: "Multiple IPs",
-      target: "load-balancer",
-      severity: "High",
-      blocked: true,
-      time: "8 minutes ago"
-    },
-    {
-      id: 3,
-      type: "Port Scanning",
-      source: "203.0.113.45",
-      target: "database-server",
-      severity: "Medium",
-      blocked: false,
-      time: "12 minutes ago"
-    }
-  ]);
 
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully");
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "Critical": return "bg-red-500";
-      case "High": return "bg-orange-500";
-      case "Medium": return "bg-yellow-500";
-      case "Low": return "bg-blue-500";
-      default: return "bg-gray-500";
-    }
   };
 
   return (
@@ -131,8 +64,18 @@ const Index = () => {
       {/* Main Content */}
       <main className="pt-16">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Welcome to Pactrus
+            </h1>
+            <p className="text-xl text-gray-400">
+              Your Cyber Guardian Security Platform
+            </p>
+          </div>
+
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <Card className="bg-[#2d3748] border-gray-700">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -182,96 +125,8 @@ const Index = () => {
             </Card>
           </div>
 
-          {/* Dashboard Content */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Recent Alerts */}
-            <Card className="bg-[#2d3748] border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <AlertTriangle className="mr-2 h-5 w-5 text-orange-400" />
-                  Recent Alerts
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {alerts.map((alert) => (
-                    <div key={alert.id} className="p-4 bg-[#1a1d29] rounded-lg border border-gray-600">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-white font-medium">{alert.title}</h3>
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`${getSeverityColor(alert.severity)} text-white text-xs`}>
-                            {alert.severity}
-                          </Badge>
-                          <span className="text-xs text-gray-400">{alert.time}</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-400 text-sm mb-2">{alert.description}</p>
-                      <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
-                        {alert.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Link to="/alerts">
-                    <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
-                      View All Alerts
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Attack Patterns */}
-            <Card className="bg-[#2d3748] border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center">
-                  <Shield className="mr-2 h-5 w-5 text-purple-400" />
-                  Recent Attack Patterns
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {attackPatterns.map((pattern) => (
-                    <div key={pattern.id} className="p-4 bg-[#1a1d29] rounded-lg border border-gray-600">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="text-white font-medium">{pattern.type}</h3>
-                          <p className="text-gray-400 text-sm">
-                            {pattern.source} → {pattern.target}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge className={`${getSeverityColor(pattern.severity)} text-white text-xs`}>
-                            {pattern.severity}
-                          </Badge>
-                          <span className="text-xs text-gray-400">{pattern.time}</span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${pattern.blocked ? 'border-green-600 text-green-400' : 'border-red-600 text-red-400'}`}
-                        >
-                          {pattern.blocked ? 'Blocked' : 'Allowed'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4">
-                  <Link to="/attack-patterns">
-                    <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
-                      View All Attack Patterns
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Quick Actions */}
-          <Card className="bg-[#2d3748] border-gray-700 mt-6">
+          <Card className="bg-[#2d3748] border-gray-700 mb-8">
             <CardHeader>
               <CardTitle className="text-white flex items-center">
                 <Activity className="mr-2 h-5 w-5 text-blue-400" />
@@ -299,6 +154,119 @@ const Index = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Shield className="mr-2 h-5 w-5 text-purple-400" />
+                  Security Rules
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Configure and manage your security rules to protect against various threats.
+                </p>
+                <Link to="/rules">
+                  <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                    Manage Rules
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <AlertTriangle className="mr-2 h-5 w-5 text-orange-400" />
+                  Security Alerts
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Monitor and respond to security alerts in real-time.
+                </p>
+                <Link to="/alerts">
+                  <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                    View Alerts
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <TrendingUp className="mr-2 h-5 w-5 text-blue-400" />
+                  ML Suggestions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Get AI-powered suggestions for improving your security posture.
+                </p>
+                <Link to="/ml-suggestions">
+                  <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                    View Suggestions
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Activity className="mr-2 h-5 w-5 text-green-400" />
+                  Attack Patterns
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Analyze attack patterns and behaviors to strengthen defenses.
+                </p>
+                <Link to="/attack-patterns">
+                  <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                    Analyze Patterns
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <Clock className="mr-2 h-5 w-5 text-yellow-400" />
+                  Real-time Monitoring
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Monitor your systems in real-time for immediate threat detection.
+                </p>
+                <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                  Start Monitoring
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#2d3748] border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center">
+                  <ShieldCheck className="mr-2 h-5 w-5 text-cyan-400" />
+                  Compliance Reports
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-400 mb-4">
+                  Generate comprehensive compliance and security reports.
+                </p>
+                <Button variant="outline" className="w-full border-gray-600 text-gray-300 hover:bg-gray-700">
+                  Generate Reports
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
