@@ -1,4 +1,5 @@
-
+import { useToast } from "@/components/ui/use-toast"
+import suricataApi from '@/services/suricataApi';
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,9 @@ interface RuleGeneratorProps {
 }
 
 const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorProps) => {
+
+  const { toast } = useToast();
+  
   const [ruleConfig, setRuleConfig] = useState({
     attackType: "SQL Injection",
     ruleName: "",
@@ -97,7 +101,7 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
     setRuleConfig(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+ /* const handleSave = () => {
     if (onSave) {
       const ruleData = {
         name: ruleConfig.ruleName || `${ruleConfig.attackType} Rule`,
@@ -114,7 +118,44 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
       };
       onSave(ruleData);
     }
-  };
+  };*/
+
+  const handleSave = async () => {
+  try {
+    if (onSave) {
+      const ruleData = {
+        name: ruleConfig.ruleName || `${ruleConfig.attackType} Rule`,
+        attackType: ruleConfig.attackType,
+        sourceIp: ruleConfig.sourceIp,
+        sourcePort: ruleConfig.sourcePort,
+        targetIp: ruleConfig.targetIp,
+        targetPort: ruleConfig.targetPort,
+        action: ruleConfig.action,
+        protocol: ruleConfig.protocol,
+        description: ruleConfig.description,
+        priority: ruleConfig.priority,
+        customOptions: ruleConfig.customOptions
+      };
+      
+      // Deploy to Suricata
+      await suricataApi.deployRule(ruleData);
+      
+      // Save to local state
+      onSave(ruleData);
+      
+      toast({
+        title: "Rule Deployed Successfully",
+        description: "Rule has been deployed to Suricata server.",
+      });
+    }
+  } catch (error) {
+    toast({
+      title: "Deployment Failed",
+      description: "Failed to deploy rule to Suricata server.",
+      variant: "destructive"
+    });
+  }
+};
 
   const handleClose = () => {
     setGeneratedRule("");
