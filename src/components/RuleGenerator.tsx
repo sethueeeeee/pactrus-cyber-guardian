@@ -1,5 +1,4 @@
 import { useToast } from "@/components/ui/use-toast"
-import suricataApi from '@/services/suricataApi';
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,7 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+  DialogTitle 
 } from "@/components/ui/dialog";
 
 interface RuleGeneratorProps {
@@ -41,6 +39,7 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
   });
 
   const [generatedRule, setGeneratedRule] = useState("");
+  const [generatedRuleText, setGeneratedRuleText] = useState("");
 
   // Load editing rule data when component mounts or editingRule changes
   useEffect(() => {
@@ -75,6 +74,7 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
       });
     }
     setGeneratedRule("");
+    setGeneratedRuleText("");
   }, [editingRule, isOpen]);
 
   const attackTypes = [
@@ -83,8 +83,10 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
   ];
 
   const generateRule = () => {
-    const rule = `${ruleConfig.action} ${ruleConfig.protocol} ${ruleConfig.sourceIp} ${ruleConfig.sourcePort} -> ${ruleConfig.targetIp} ${ruleConfig.targetPort} (msg:"${ruleConfig.ruleName || ruleConfig.attackType} detected"; classtype:${ruleConfig.attackType.toLowerCase().replace(' ', '-')}; sid:1000001; priority:${getPriorityNumber(ruleConfig.priority)}; ${ruleConfig.customOptions})`;
+    const sid = Date.now() % 1000000 + 1000000;
+    const rule = `${ruleConfig.action} ${ruleConfig.protocol} ${ruleConfig.sourceIp} ${ruleConfig.sourcePort} -> ${ruleConfig.targetIp} ${ruleConfig.targetPort} (msg:"${ruleConfig.ruleName || ruleConfig.attackType} detected"; classtype:${ruleConfig.attackType.toLowerCase().replace(' ', '-')}; sid:${sid}; priority:${getPriorityNumber(ruleConfig.priority)}; ${ruleConfig.customOptions})`;
     setGeneratedRule(rule);
+    setGeneratedRuleText(rule);
   };
 
   const getPriorityNumber = (priority: string) => {
@@ -101,9 +103,11 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
     setRuleConfig(prev => ({ ...prev, [field]: value }));
   };
 
- /* const handleSave = () => {
+  const handleSave = () => {
+    // Just save to local state/storage without deploying
     if (onSave) {
       const ruleData = {
+        id: editingRule?.id || Date.now() + Math.random(),
         name: ruleConfig.ruleName || `${ruleConfig.attackType} Rule`,
         attackType: ruleConfig.attackType,
         sourceIp: ruleConfig.sourceIp,
@@ -114,52 +118,93 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
         protocol: ruleConfig.protocol,
         description: ruleConfig.description,
         priority: ruleConfig.priority.charAt(0).toUpperCase() + ruleConfig.priority.slice(1),
-        customOptions: ruleConfig.customOptions
-      };
-      onSave(ruleData);
-    }
-  };*/
-
-  const handleSave = async () => {
-  try {
-    if (onSave) {
-      const ruleData = {
-        name: ruleConfig.ruleName || `${ruleConfig.attackType} Rule`,
-        attackType: ruleConfig.attackType,
-        sourceIp: ruleConfig.sourceIp,
-        sourcePort: ruleConfig.sourcePort,
-        targetIp: ruleConfig.targetIp,
-        targetPort: ruleConfig.targetPort,
-        action: ruleConfig.action,
-        protocol: ruleConfig.protocol,
-        description: ruleConfig.description,
-        priority: ruleConfig.priority,
-        customOptions: ruleConfig.customOptions
+        customOptions: ruleConfig.customOptions,
+        status: "Pending", // Not deployed yet
+        confidence: 95,
+        created: new Date().toISOString().split('T')[0],
+        ruleText: generatedRuleText, // Store the actual Suricata rule
+        isDeployed: false
       };
       
-      // Deploy to Suricata
-      await suricataApi.deployRule(ruleData);
+      // Save to localStorage
+      const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
       
-      // Save to local state
+      if (editingRule) {
+        // Update existing rule
+        const updatedRules = existingRules.map((rule: any) => 
+          rule.id === editingRule.id ? ruleData : rule
+        );
+        localStorage.setItem('securityRules', JSON.stringify(updatedRules));
+      } else {
+        // Add new rule
+        existingRules.push(ruleData);
+        localStorage.setItem('securityRules', JSON.stringify(existingRules));
+      }
+      
+      // Trigger storage event to update other components
+      window.dispatchEvent(new Event('storage'));
+      
+      // Call parent's onSave
       onSave(ruleData);
       
       toast({
-        title: "Rule Deployed Successfully",
-        description: "Rule has been deployed to Suricata server.",
+        title: editingRule ? "Rule Updated" : "Rule Saved",
+        description: `Rule "${ruleData.name}" has been saved successfully. Click Deploy to activate it in Suricata.`,
       });
+      
+      handleClose();
     }
-  } catch (error) {
+  };
+
+  const handleSaveAsDraft = () => {
+    const ruleData = {
+      id: Date.now() + Math.random(),
+      name: ruleConfig.ruleName || `${ruleConfig.attackType} Draft`,
+      attackType: ruleConfig.attackType,
+      sourceIp: ruleConfig.sourceIp,
+      sourcePort: ruleConfig.sourcePort,
+      targetIp: ruleConfig.targetIp,
+      targetPort: ruleConfig.targetPort,
+      action: ruleConfig.action,
+      protocol: ruleConfig.protocol,
+      description: ruleConfig.description,
+      priority: ruleConfig.priority.charAt(0).toUpperCase() + ruleConfig.priority.slice(1),
+      customOptions: ruleConfig.customOptions,
+      status: "Draft",
+      confidence: 95,
+      created: new Date().toISOString().split('T')[0],
+      ruleText: generatedRuleText,
+      isDeployed: false
+    };
+    
+    const existingRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+    existingRules.push(ruleData);
+    localStorage.setItem('securityRules', JSON.stringify(existingRules));
+    
+    window.dispatchEvent(new Event('storage'));
+    
     toast({
-      title: "Deployment Failed",
-      description: "Failed to deploy rule to Suricata server.",
-      variant: "destructive"
+      title: "Draft Saved",
+      description: "Rule saved as draft.",
     });
-  }
-};
+    
+    handleClose();
+  };
 
   const handleClose = () => {
     setGeneratedRule("");
+    setGeneratedRuleText("");
     onClose();
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "critical": return "bg-red-500";
+      case "high": return "bg-orange-500";
+      case "medium": return "bg-yellow-500";
+      case "low": return "bg-gray-500";
+      default: return "bg-gray-500";
+    }
   };
 
   return (
@@ -330,6 +375,7 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
                     {editingRule ? "Update Rule" : "Save Rule"}
                   </Button>
                   <Button 
+                    onClick={handleSaveAsDraft}
                     variant="outline"
                     className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
                   >
@@ -365,21 +411,17 @@ const RuleGenerator = ({ isOpen, onClose, onSave, editingRule }: RuleGeneratorPr
                 </div>
               </CardContent>
             </Card>
+
+            <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-md">
+              <p className="text-sm text-blue-300">
+                <strong>Note:</strong> After saving, go to Security Rules page to deploy this rule to Suricata.
+              </p>
+            </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-};
-
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case "critical": return "bg-red-500";
-    case "high": return "bg-orange-500";
-    case "medium": return "bg-yellow-500";
-    case "low": return "bg-gray-500";
-    default: return "bg-gray-500";
-  }
 };
 
 export default RuleGenerator;

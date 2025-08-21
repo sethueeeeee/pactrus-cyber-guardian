@@ -21,7 +21,8 @@ import {
   Trash2,
   Activity,
   User,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
 import RuleGenerator from "@/components/RuleGenerator";
 import { useToast } from "@/hooks/use-toast";
@@ -42,23 +43,7 @@ interface Rule {
   protocol?: string;
   description?: string;
   customOptions?: string;
-  // ML Rule specific fields
-  mlRuleId?: number;
-  suggestedRule?: string;
-  sourcePattern?: string;
-  targetPattern?: string;
-  // Attack Pattern specific fields
-  attackPatternId?: number;
-  sourceCountry?: string;
-  targetService?: string;
-  severity?: string;
-  packets?: number;
-  bytes?: number;
-  duration?: string;
-  threatIntel?: any;
-  geolocation?: any;
-  recommendedAction?: string;
-  ruleTriggered?: string;
+  ruleText?: string;
   isDeployed?: boolean;
 }
 
@@ -69,127 +54,37 @@ const Rules = () => {
   const [isRuleGeneratorOpen, setIsRuleGeneratorOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [selectedRules, setSelectedRules] = useState<number[]>([]);
-
-  const [rules, setRules] = useState<Rule[]>([
-    {
-      id: 1,
-      name: "SQL Injection Detection",
-      attackType: "SQL Injection",
-      status: "Active",
-      confidence: 95,
-      created: "2024-01-15",
-      priority: "Critical",
-      sourceIp: "any",
-      sourcePort: "any",
-      targetIp: "192.168.1.0/24",
-      targetPort: "80",
-      action: "alert",
-      protocol: "tcp",
-      description: "Detects SQL injection attempts",
-      customOptions: "content:\"union select\"; nocase;",
-      isDeployed: false
-    },
-    {
-      id: 2,
-      name: "SSH Brute Force Protection",
-      attackType: "Brute Force",
-      status: "Active",
-      confidence: 88,
-      created: "2024-01-14",
-      priority: "High",
-      sourceIp: "any",
-      sourcePort: "any",
-      targetIp: "any",
-      targetPort: "22",
-      action: "drop",
-      protocol: "tcp",
-      description: "Blocks SSH brute force attacks",
-      customOptions: "detection_filter:track by_src, count 5, seconds 60;",
-      isDeployed: false
-    },
-    {
-      id: 3,
-      name: "Port Scan Detection",
-      attackType: "Port Scan",
-      status: "Inactive",
-      confidence: 92,
-      created: "2024-01-13",
-      priority: "Medium",
-      sourceIp: "any",
-      sourcePort: "any",
-      targetIp: "any",
-      targetPort: "any",
-      action: "alert",
-      protocol: "tcp",
-      description: "Detects port scanning activities",
-      customOptions: "threshold:type threshold, track by_src, count 10, seconds 60;",
-      isDeployed: false
-    },
-    {
-      id: 4,
-      name: "XSS Attack Prevention",
-      attackType: "XSS",
-      status: "Active",
-      confidence: 90,
-      created: "2024-01-12",
-      priority: "High",
-      sourceIp: "any",
-      sourcePort: "any",
-      targetIp: "any",
-      targetPort: "80",
-      action: "alert",
-      protocol: "http",
-      description: "Prevents XSS attacks",
-      customOptions: "content:\"<script\"; nocase;",
-      isDeployed: false
-    },
-    {
-      id: 5,
-      name: "DDoS Traffic Filter",
-      attackType: "DDoS",
-      status: "Pending",
-      confidence: 85,
-      created: "2024-01-11",
-      priority: "Critical",
-      sourceIp: "any",
-      sourcePort: "any",
-      targetIp: "any",
-      targetPort: "any",
-      action: "drop",
-      protocol: "tcp",
-      description: "Filters DDoS traffic patterns",
-      customOptions: "threshold:type both, track by_src, count 100, seconds 10;",
-      isDeployed: false
-    }
-  ]);
+  const [deployingRules, setDeployingRules] = useState<number[]>([]);
+  const [rules, setRules] = useState<Rule[]>([]);
 
   useEffect(() => {
-    const loadStoredRules = () => {
-      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-      if (storedRules.length > 0) {
-        setRules(prev => {
-          const existingIds = prev.map(rule => rule.id);
-          const newStoredRules = storedRules.filter((storedRule: Rule) => !existingIds.includes(storedRule.id));
-          return [...prev, ...newStoredRules];
-        });
-      }
-    };
-
-    loadStoredRules();
+    loadRules();
     
     const handleStorageChange = () => {
-      loadStoredRules();
+      loadRules();
     };
     
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('rulesUpdated', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('rulesUpdated', handleStorageChange);
+    };
   }, []);
+
+  const loadRules = () => {
+    // Load from localStorage
+    const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
+    setRules(storedRules);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Active": return "bg-green-500";
       case "Inactive": return "bg-gray-500";
       case "Pending": return "bg-yellow-500";
+      case "Draft": return "bg-blue-500";
       default: return "bg-gray-500";
     }
   };
@@ -228,88 +123,108 @@ const Rules = () => {
   };
 
   const handleEditRule = (rule: Rule) => {
-    console.log('Editing rule:', rule); // Debug log
     setEditingRule(rule);
     setIsRuleGeneratorOpen(true);
   };
 
   const handleDeleteRule = (ruleId: number) => {
-    setRules(prev => prev.filter(rule => rule.id !== ruleId));
+    const updatedRules = rules.filter(rule => rule.id !== ruleId);
+    setRules(updatedRules);
+    localStorage.setItem('securityRules', JSON.stringify(updatedRules));
     
-    const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-    const updatedStoredRules = storedRules.filter((rule: Rule) => rule.id !== ruleId);
-    localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
-    window.dispatchEvent(new Event('storage'));
+    toast({
+      title: "Rule Deleted",
+      description: "Rule has been removed successfully.",
+    });
   };
 
   const handleSaveRule = (ruleData: any) => {
-    if (editingRule) {
-      const updatedRule = {
-        ...editingRule,
-        ...ruleData,
-        id: editingRule.id
-      };
-      
-      setRules(prev => prev.map(rule => 
-        rule.id === editingRule.id ? updatedRule : rule
-      ));
-      
-      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-      const updatedStoredRules = storedRules.map((rule: Rule) => 
-        rule.id === editingRule.id ? updatedRule : rule
-      );
-      localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
-      window.dispatchEvent(new Event('storage'));
-      
-    } else {
-      const newRule: Rule = {
-        id: Date.now() + Math.random(),
-        ...ruleData,
-        status: "Pending",
-        confidence: 95,
-        created: new Date().toISOString().split('T')[0],
-        isDeployed: false
-      };
-      setRules(prev => [...prev, newRule]);
-    }
-    
+    loadRules(); // Reload rules from localStorage
     setEditingRule(null);
     setIsRuleGeneratorOpen(false);
   };
 
+  const generateSuricataRule = (rule: Rule) => {
+    // If rule already has ruleText, use it
+    if (rule.ruleText) {
+      return rule.ruleText;
+    }
+    
+    // Otherwise generate it
+    const action = rule.action || 'alert';
+    const protocol = rule.protocol || 'tcp';
+    const srcIp = rule.sourceIp || 'any';
+    const srcPort = rule.sourcePort || 'any';
+    const dstIp = rule.targetIp || 'any';
+    const dstPort = rule.targetPort || 'any';
+    const msg = rule.name || 'Custom rule';
+    const priority = rule.priority?.toLowerCase() || 'medium';
+    
+    const priorityMap: { [key: string]: string } = {
+      'critical': '1',
+      'high': '2',
+      'medium': '3',
+      'low': '4'
+    };
+    
+    const priorityNum = priorityMap[priority] || '3';
+    const sid = Date.now() % 1000000 + 1000000;
+    
+    let options = `msg:"${msg}"; `;
+    if (rule.customOptions) {
+      options += `${rule.customOptions} `;
+    }
+    options += `sid:${sid}; priority:${priorityNum};`;
+    
+    return `${action} ${protocol} ${srcIp} ${srcPort} -> ${dstIp} ${dstPort} (${options})`;
+  };
+
   const handleDeployRule = async (ruleId: number) => {
+    const rule = rules.find(r => r.id === ruleId);
+    if (!rule) return;
+
+    setDeployingRules(prev => [...prev, ruleId]);
+
     try {
-      toast({
-        title: "Deploying to Suricata",
-        description: "Sending rule to Ubuntu Suricata server in VMware...",
+      // Generate Suricata rule
+      const suricataRule = generateSuricataRule(rule);
+      
+      // Deploy to Suricata via API
+      const response = await fetch('http://192.168.100.20:5000/api/rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rule: suricataRule }),
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (response.ok) {
+        // Update rule status
+        const updatedRules = rules.map(r => 
+          r.id === ruleId 
+            ? { ...r, status: "Active", isDeployed: true }
+            : r
+        );
+        setRules(updatedRules);
+        localStorage.setItem('securityRules', JSON.stringify(updatedRules));
 
-      setRules(prev => prev.map(rule => 
-        rule.id === ruleId 
-          ? { ...rule, status: "Active", isDeployed: true }
-          : rule
-      ));
-
-      const storedRules = JSON.parse(localStorage.getItem('securityRules') || '[]');
-      const updatedStoredRules = storedRules.map((rule: Rule) => 
-        rule.id === ruleId ? { ...rule, status: "Active", isDeployed: true } : rule
-      );
-      localStorage.setItem('securityRules', JSON.stringify(updatedStoredRules));
-      window.dispatchEvent(new Event('storage'));
-
-      toast({
-        title: "Rule Deployed Successfully",
-        description: "Rule has been deployed to Suricata server in VMware.",
-      });
-
-    } catch (error) {
+        toast({
+          title: "Rule Deployed Successfully",
+          description: `Rule "${rule.name}" has been deployed to Suricata.`,
+        });
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Deployment failed');
+      }
+    } catch (error: any) {
+      console.error('Deployment error:', error);
       toast({
         title: "Deployment Failed",
-        description: "Failed to deploy rule to Suricata server. Please try again.",
+        description: error.message || "Failed to deploy rule to Suricata. Please check the API connection.",
         variant: "destructive"
       });
+    } finally {
+      setDeployingRules(prev => prev.filter(id => id !== ruleId));
     }
   };
 
@@ -386,6 +301,7 @@ const Rules = () => {
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                   <option value="pending">Pending</option>
+                  <option value="draft">Draft</option>
                 </select>
                 <Button variant="outline" className="border-gray-600 text-gray-300">
                   <Filter className="h-4 w-4" />
@@ -457,8 +373,6 @@ const Rules = () => {
                           />
                           <div>
                             {rule.name}
-                            {rule.mlRuleId && <Badge className="ml-2 bg-purple-500 text-xs">ML</Badge>}
-                            {rule.attackPatternId && <Badge className="ml-2 bg-blue-500 text-xs">AP</Badge>}
                           </div>
                         </div>
                       </TableCell>
@@ -509,8 +423,16 @@ const Rules = () => {
                               size="sm" 
                               className="bg-green-500 hover:bg-green-600"
                               onClick={() => handleDeployRule(rule.id)}
+                              disabled={deployingRules.includes(rule.id)}
                             >
-                              Deploy
+                              {deployingRules.includes(rule.id) ? (
+                                <>
+                                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                                  Deploying...
+                                </>
+                              ) : (
+                                'Deploy'
+                              )}
                             </Button>
                           )}
                         </div>
